@@ -9,7 +9,9 @@ const fileUploaderContainer = document.getElementById("fileUploaderContainer");
 const clearBtn = document.getElementById("clearBtn");
 const fileUploader = document.getElementById("fileUploader");
 const submitBtn = document.getElementById("submitBtn");
-
+const clearIcon = document.getElementById("clearIcon");
+const manualfileUploader = document.getElementById("manualfileUploader");
+const manualclearIcon = document.getElementById("manualclearIcon");
 // Event listener for radio button change
 bulkEntryRadio.addEventListener("change", function () {
   if (this.checked) {
@@ -30,11 +32,7 @@ submitBtn.addEventListener("click", function () {
   const fileInput = document.getElementById("fileUploader").files;
 
   if (!bulkEntry && !manualEntry) {
-    DevExpress.ui.notify(
-      `Please select a dates before submitting.`,
-      "warning",
-      3000
-    );
+    DevExpress.ui.notify(`Please select any one option.`, "warning", 3000);
     return;
   }
 
@@ -48,7 +46,9 @@ submitBtn.addEventListener("click", function () {
       return;
     }
   } else if (manualEntry) {
-    alert("'Manual Entry' selected");
+    $(".uploadmode").addClass("hidden");
+    $(".date-picker-container").removeClass("hidden");
+    frameCalender();
   }
 });
 
@@ -58,29 +58,21 @@ clearIcon.addEventListener("click", function () {
   clearIcon.style.display = "none"; // Hide the "X" icon
 });
 
+// Clear the file input when the "X" icon is clicked
+manualclearIcon.addEventListener("click", function () {
+  manualfileUploader.value = ""; // Clear the file input
+  manualclearIcon.style.display = "none"; // Hide the "X" icon
+});
+
 // Event Listeners for Yes and No buttons
 document.getElementById("yesButton").addEventListener("click", function () {
   $(".card").addClass("hidden");
   $(".uploadmode").removeClass("hidden");
-  // $(".date-picker-container").removeClass("hidden");
-  // frameCalender();
 });
 
 document.getElementById("noButton").addEventListener("click", function () {
   alert("Thank you for confirming!");
   window.close();
-});
-
-document.getElementById("submitBtn").addEventListener("click", function () {
-  const bulkEntry = document.getElementById("bulkEntry").checked;
-  const manualEntry = document.getElementById("manualEntry").checked;
-  if (bulkEntry) {
-    alert("'Bulk Entry' selected");
-  } else if (manualEntry) {
-    alert("'Manual Entry' selected");
-  } else {
-    DevExpress.ui.notify(`Please select any one option`, "warning", 3000);
-  }
 });
 
 // Show the "X" icon when a file is selected
@@ -89,6 +81,14 @@ fileUploader.addEventListener("change", function () {
     clearIcon.style.display = "inline"; // Show the "X" icon
   } else {
     clearIcon.style.display = "none"; // Hide if no file is selected
+  }
+});
+
+manualfileUploader.addEventListener("change", function () {
+  if (manualfileUploader.files.length > 0) {
+    manualclearIcon.style.display = "inline"; // Show the "X" icon
+  } else {
+    manualclearIcon.style.display = "none"; // Hide if no file is selected
   }
 });
 
@@ -151,6 +151,17 @@ function showModal() {
     );
     return false;
   }
+
+  const fileInput = document.getElementById("manualfileUploader").files;
+  if (fileInput.length === 0) {
+    DevExpress.ui.notify(
+      `Please upload a file.`,
+      "warning",
+      3000
+    );
+    return false;
+  }
+
   $(".flatpickr-prev-month").addClass("hidden");
   $(".flatpickr-next-month").addClass("hidden");
 
