@@ -54,10 +54,7 @@ submitBtn.addEventListener("click", function () {
       );
       return;
     } else {
-      showLoading("UploadLoader");
-      setTimeout(() => {
-        readExcel("fileUploader", "bulk");
-      }, 3000);
+      readExcel("fileUploader", "bulk");
     }
   } else if (manualEntry) {
     $(".uploadmode").addClass("hidden");
@@ -92,6 +89,7 @@ document.getElementById("noButton").addEventListener("click", function () {
 // Show the "X" icon when a file is selected
 fileUploader.addEventListener("change", function () {
   if (fileUploader.files.length > 0) {
+    $(".clear-icon").removeClass("hidden");
     clearIcon.style.display = "inline"; // Show the "X" icon
   } else {
     clearIcon.style.display = "none"; // Hide if no file is selected
@@ -100,6 +98,7 @@ fileUploader.addEventListener("change", function () {
 
 manualfileUploader.addEventListener("change", function () {
   if (manualfileUploader.files.length > 0) {
+    $(".clear-icon").removeClass("hidden");
     manualclearIcon.style.display = "inline"; // Show the "X" icon
   } else {
     manualclearIcon.style.display = "none"; // Hide if no file is selected
@@ -205,114 +204,6 @@ function submitForm() {
   }, 3000);
 }
 
-function framegrid(datasource) {
-  $("#timesheetdatagrid")
-    .dxDataGrid({
-      dataSource: datasource,
-      showBorders: true,
-      showRowLines: true,
-      rowAlternationEnabled: false,
-      columnAutoWidth: false,
-      width: "100%",
-      wordWrapEnabled: true,
-      searchPanel: {
-        visible: true,
-        width: 240,
-        placeholder: "Search...",
-      },
-      headerFilter: {
-        visible: true,
-      },
-      paging: {
-        enabled: true,
-        pageSize: 15,
-      },
-      editing: {
-        mode: "cell",
-        allowUpdating: true,
-      },
-      pager: {
-        visible: true,
-        allowedPageSizes: [10, 15, 25, 50, "all"],
-        showPageSizeSelector: true,
-        showInfo: true,
-        showNavigationButtons: true,
-        displayMode: "compact",
-      },
-      noDataText: "No data Available.",
-      toolbar: {
-        items: [
-          {
-            location: "after",
-            widget: "dxButton",
-            options: {
-              icon: "save",
-              onClick() {
-                alert("Save button clicked");
-                // Add your save logic here
-              },
-              elementAttr: {
-                id: "savetimeinfo",
-              },
-            },
-          },
-        ],
-      },
-      columns: [
-        {
-          dataField: "timeStamp",
-          caption: "Date",
-          alignment: "center",
-          allowEditing: false,
-          width: "12%",
-        },
-        {
-          dataField: "length",
-          caption: "Length",
-          alignment: "center",
-          allowEditing: false,
-          width: "12%",
-        },
-        {
-          dataField: "billableLength",
-          caption: "Daily Hours",
-          alignment: "center",
-          allowEditing: true,
-          width: "12%",
-        },
-        {
-          dataField: "workItemId",
-          caption: "Work Items",
-          alignment: "center",
-          allowEditing: false,
-          width: "12%",
-        },
-        {
-          dataField: "Comment",
-          caption: "comment",
-          alignment: "center",
-          allowEditing: true,
-          width: "12%",
-        },
-        {
-          dataField: "userId",
-          caption: "UserId",
-          alignment: "center",
-          allowEditing: false,
-          width: "12%",
-        },
-        {
-          dataField: "Authtoken",
-          caption: "Auth Token",
-          alignment: "center",
-          allowEditing: false,
-          width: "12%",
-        },
-      ],
-    })
-    .dxDataGrid("instance");
-}
-
 // Function to clear the selection
 function clearSelection() {
   selectedDates = []; // Reset the selected dates array
@@ -335,7 +226,10 @@ function readExcel(filID, methodtype, datesselected = false) {
       }
       ExcelData = ProcessExcel(binaryString);
       if (!!ExcelData && ExcelData.length > 0 && isValidFile(ExcelData[0])) {
-        saveData(ExcelData, methodtype, datesselected);
+        showLoading("UploadLoader");
+        setTimeout(() => {
+          saveData(ExcelData, methodtype, datesselected);
+        }, 3000); 
       } else {
         hideLoading("UploadLoader");
         DevExpress.ui.notify(`please upload valid excel file.`, "error", 3000);
