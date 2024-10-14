@@ -27,6 +27,8 @@
       rel="stylesheet"
       href="https://cdn3.devexpress.com/jslib/22.1.3/css/dx.light.css"
     />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.15.6/xlsx.core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xls/0.7.6/xls.core.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-polyfill/7.10.1/polyfill.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/3.8.0/exceljs.min.js"></script>
@@ -69,7 +71,12 @@
         <div class="file-container" id="fileUploaderContainer">
           <label for="fileUploader">Upload a file:</label>
           <div class="displayarrange">
-            <input type="file" id="fileUploader" name="fileUploader" accept=".xlsx, .xlsm" />
+            <input
+              type="file"
+              id="fileUploader"
+              name="fileUploader"
+              accept=".xlsx, .xlsm"
+            />
             <span class="clear-icon" id="clearIcon">&times;</span>
           </div>
         </div>
@@ -89,7 +96,12 @@
           <div class="file-container-manual" id="fileUploaderContainer">
             <label for="filemanualUploader">Upload a file:</label>
             <div class="displayarrange">
-              <input type="file" id="manualfileUploader" name="fileUploader" accept=".xlsx, .xlsm" />
+              <input
+                type="file"
+                id="manualfileUploader"
+                name="fileUploader"
+                accept=".xlsx, .xlsm"
+              />
               <span class="clear-icon" id="manualclearIcon">&times;</span>
             </div>
           </div>
@@ -107,6 +119,16 @@
             <button class="confirm-btn" onclick="submitForm()">Confirm</button>
             <button class="cancel-btn" onclick="closeModal()">Cancel</button>
           </div>
+        </div>
+      </div>
+      <div
+        class="uploadModal hidden"
+        id="UploadLoader"
+        style="z-index: 999 !important"
+      >
+        <div class="upload-modal-content">
+          <div class="uploadstatus"></div>
+          <p id="uploadtitle">saving your time entries please wait ....</p>
         </div>
       </div>
     </div>

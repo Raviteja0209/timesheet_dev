@@ -12,6 +12,15 @@ const submitBtn = document.getElementById("submitBtn");
 const clearIcon = document.getElementById("clearIcon");
 const manualfileUploader = document.getElementById("manualfileUploader");
 const manualclearIcon = document.getElementById("manualclearIcon");
+var validColumns = {
+  date: true,
+  length: true,
+  dailyhours: true,
+  workitems: true,
+  comment: true,
+  userid: true,
+  authtoken: true,
+};
 // Event listener for radio button change
 bulkEntryRadio.addEventListener("change", function () {
   if (this.checked) {
@@ -44,6 +53,11 @@ submitBtn.addEventListener("click", function () {
         3000
       );
       return;
+    } else {
+      showLoading("UploadLoader");
+      setTimeout(() => {
+        readExcel("fileUploader", "bulk");
+      }, 3000);
     }
   } else if (manualEntry) {
     $(".uploadmode").addClass("hidden");
@@ -154,11 +168,7 @@ function showModal() {
 
   const fileInput = document.getElementById("manualfileUploader").files;
   if (fileInput.length === 0) {
-    DevExpress.ui.notify(
-      `Please upload a file.`,
-      "warning",
-      3000
-    );
+    DevExpress.ui.notify(`Please upload a file.`, "warning", 3000);
     return false;
   }
 
@@ -188,13 +198,119 @@ function closeModal() {
 
 // Function to submit the form after confirmation
 function submitForm() {
-  DevExpress.ui.notify(
-    `The timesheet has been submitted successfully.`,
-    "success",
-    3000
-  );
-  closeModal();
-  clearSelection();
+  let datesselected = selectedDaysArr;
+  showLoading("UploadLoader");
+  setTimeout(() => {
+    readExcel("manualfileUploader", "manual", datesselected);
+  }, 3000);
+}
+
+function framegrid(datasource) {
+  $("#timesheetdatagrid")
+    .dxDataGrid({
+      dataSource: datasource,
+      showBorders: true,
+      showRowLines: true,
+      rowAlternationEnabled: false,
+      columnAutoWidth: false,
+      width: "100%",
+      wordWrapEnabled: true,
+      searchPanel: {
+        visible: true,
+        width: 240,
+        placeholder: "Search...",
+      },
+      headerFilter: {
+        visible: true,
+      },
+      paging: {
+        enabled: true,
+        pageSize: 15,
+      },
+      editing: {
+        mode: "cell",
+        allowUpdating: true,
+      },
+      pager: {
+        visible: true,
+        allowedPageSizes: [10, 15, 25, 50, "all"],
+        showPageSizeSelector: true,
+        showInfo: true,
+        showNavigationButtons: true,
+        displayMode: "compact",
+      },
+      noDataText: "No data Available.",
+      toolbar: {
+        items: [
+          {
+            location: "after",
+            widget: "dxButton",
+            options: {
+              icon: "save",
+              onClick() {
+                alert("Save button clicked");
+                // Add your save logic here
+              },
+              elementAttr: {
+                id: "savetimeinfo",
+              },
+            },
+          },
+        ],
+      },
+      columns: [
+        {
+          dataField: "timeStamp",
+          caption: "Date",
+          alignment: "center",
+          allowEditing: false,
+          width: "12%",
+        },
+        {
+          dataField: "length",
+          caption: "Length",
+          alignment: "center",
+          allowEditing: false,
+          width: "12%",
+        },
+        {
+          dataField: "billableLength",
+          caption: "Daily Hours",
+          alignment: "center",
+          allowEditing: true,
+          width: "12%",
+        },
+        {
+          dataField: "workItemId",
+          caption: "Work Items",
+          alignment: "center",
+          allowEditing: false,
+          width: "12%",
+        },
+        {
+          dataField: "Comment",
+          caption: "comment",
+          alignment: "center",
+          allowEditing: true,
+          width: "12%",
+        },
+        {
+          dataField: "userId",
+          caption: "UserId",
+          alignment: "center",
+          allowEditing: false,
+          width: "12%",
+        },
+        {
+          dataField: "Authtoken",
+          caption: "Auth Token",
+          alignment: "center",
+          allowEditing: false,
+          width: "12%",
+        },
+      ],
+    })
+    .dxDataGrid("instance");
 }
 
 // Function to clear the selection
@@ -202,4 +318,153 @@ function clearSelection() {
   selectedDates = []; // Reset the selected dates array
   document.getElementById("daterange").value = ""; // Clear the Flatpickr input
   flatpickrInstance.clear(); // Clear the Flatpickr selection but keep the calendar
+}
+
+function readExcel(filID, methodtype, datesselected = false) {
+  let ExcelData = [];
+  var FileUploaded = $("#" + filID)[0]; // Use the correct ID variable
+  if (typeof FileReader !== "undefined") {
+    var reader = new FileReader();
+
+    // Handle the readAsArrayBuffer method
+    reader.onload = function (e) {
+      var data = new Uint8Array(e.target.result);
+      var binaryString = "";
+      for (var i = 0; i < data.length; i++) {
+        binaryString += String.fromCharCode(data[i]);
+      }
+      ExcelData = ProcessExcel(binaryString);
+      if (!!ExcelData && ExcelData.length > 0 && isValidFile(ExcelData[0])) {
+        saveData(ExcelData, methodtype, datesselected);
+      } else {
+        hideLoading("UploadLoader");
+        DevExpress.ui.notify(`please upload valid excel file.`, "error", 3000);
+      }
+    };
+
+    // Use readAsArrayBuffer for reading files
+    reader.readAsArrayBuffer(FileUploaded.files[0]);
+  } else {
+    alert("This browser does not support HTML5.");
+  }
+}
+
+function processmanualinfo(exceldata, datesselected) {
+  let gridsource = [];
+  datesselected.forEach((ele) => {
+    for (i = 0; i < 3; i++) {
+      gridsource.push({
+        timeStamp: ele.date,
+        length: exceldata[0].length,
+        billableLength: "",
+        workItemId: exceldata[0].Workitems,
+        comment: exceldata[0].Comment,
+        userId: exceldata[0].UserID,
+        Authtoken: exceldata[0].Authtoken,
+      });
+    }
+  });
+  return gridsource;
+}
+
+function ProcessExcel(data) {
+  var workbook = XLSX.read(data, {
+    type: "binary",
+  });
+  var firstSheet = workbook.SheetNames[0];
+  var excelRows = XLSX.utils.sheet_to_row_object_array(
+    workbook.Sheets[firstSheet]
+  );
+  return excelRows;
+}
+
+function showLoading(id) {
+  const modal = $("#" + id);
+  modal.removeClass("hidden");
+  document.body.style.overflow = "hidden"; // Hide scrollbar
+}
+
+function hideLoading(id) {
+  const modal = $("#" + id);
+  modal.addClass("hidden");
+  document.body.style.overflow = "auto"; // Show scrollbar
+}
+
+function isValidFile(data) {
+  let keys = Object.keys(data);
+  let isValid = false;
+  keys.forEach((ele) => {
+    isValid = validColumns[ele.toLowerCase().replaceAll(" ", "")];
+  });
+  return isValid;
+}
+
+async function saveData(datainp, methodType, datesselected = false) {
+  let payload = preparereq(datainp, methodType, datesselected);
+  var settings = {
+    url: "", //paste your api url here
+    method: "POST",
+    headers: {
+      Authorization: datainp[0].Authtoken,
+    },
+    data: JSON.stringify(payload),
+  };
+
+  try {
+    // const res = await $.ajax(settings);
+    // if (!!res) {
+    console.log(payload);
+    hideLoading("UploadLoader");
+    if (methodType == "manual") {
+      closeModal();
+      clearSelection();
+    }
+    DevExpress.ui.notify(
+      `The timesheet has been submitted successfully.`,
+      "success",
+      3000
+    );
+    openHomePage(methodType);
+    // }
+  } catch (e) {
+    hideLoading("UploadLoader");
+    if (methodType == "manual") {
+      closeModal();
+      clearSelection();
+    }
+    DevExpress.ui.notify(
+      `Failed to save your time entries,Please reach out to the support team`,
+      "error",
+      3000
+    );
+  }
+}
+
+function openHomePage(methodType) {
+  $(".card").removeClass("hidden");
+  $(".uploadmode").addClass("hidden");
+  $(".date-picker-container").addClass("hidden");
+  $(".clear-icon").addClass("hidden");
+  methodType == "bulk"
+    ? (fileUploader.value = "")
+    : (manualfileUploader.value = "");
+}
+
+function preparereq(data, methodType, seldates = false) {
+  let reqpayload = [];
+  if (methodType == "bulk") {
+    data.forEach((ele) => {
+      reqpayload.push({
+        timeStamp: ele.date,
+        length: Number(ele.length),
+        billableLength: Number(ele["Daily Hours"]),
+        workItemId: Number(ele.Workitems),
+        comment: ele.Comment,
+        userId: ele.UserID,
+      });
+    });
+  } else if (methodType == "manual") {
+    reqpayload = processmanualinfo(data, seldates);
+  }
+  return reqpayload;
 }
