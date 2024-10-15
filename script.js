@@ -9,7 +9,18 @@ const fileUploaderContainer = document.getElementById("fileUploaderContainer");
 const clearBtn = document.getElementById("clearBtn");
 const fileUploader = document.getElementById("fileUploader");
 const submitBtn = document.getElementById("submitBtn");
-
+const clearIcon = document.getElementById("clearIcon");
+const manualfileUploader = document.getElementById("manualfileUploader");
+const manualclearIcon = document.getElementById("manualclearIcon");
+var validColumns = {
+  date: true,
+  length: true,
+  dailyhours: true,
+  workitems: true,
+  comment: true,
+  userid: true,
+  authtoken: true,
+};
 // Event listener for radio button change
 bulkEntryRadio.addEventListener("change", function () {
   if (this.checked) {
@@ -30,11 +41,7 @@ submitBtn.addEventListener("click", function () {
   const fileInput = document.getElementById("fileUploader").files;
 
   if (!bulkEntry && !manualEntry) {
-    DevExpress.ui.notify(
-      `Please select a dates before submitting.`,
-      "warning",
-      3000
-    );
+    DevExpress.ui.notify(`Please select any one option.`, "warning", 3000);
     return;
   }
 
@@ -46,9 +53,13 @@ submitBtn.addEventListener("click", function () {
         3000
       );
       return;
+    } else {
+      readExcel("fileUploader", "bulk");
     }
   } else if (manualEntry) {
-    alert("'Manual Entry' selected");
+    $(".uploadmode").addClass("hidden");
+    $(".date-picker-container").removeClass("hidden");
+    frameCalender();
   }
 });
 
@@ -58,12 +69,16 @@ clearIcon.addEventListener("click", function () {
   clearIcon.style.display = "none"; // Hide the "X" icon
 });
 
+// Clear the file input when the "X" icon is clicked
+manualclearIcon.addEventListener("click", function () {
+  manualfileUploader.value = ""; // Clear the file input
+  manualclearIcon.style.display = "none"; // Hide the "X" icon
+});
+
 // Event Listeners for Yes and No buttons
 document.getElementById("yesButton").addEventListener("click", function () {
   $(".card").addClass("hidden");
   $(".uploadmode").removeClass("hidden");
-  // $(".date-picker-container").removeClass("hidden");
-  // frameCalender();
 });
 
 document.getElementById("noButton").addEventListener("click", function () {
@@ -71,24 +86,22 @@ document.getElementById("noButton").addEventListener("click", function () {
   window.close();
 });
 
-document.getElementById("submitBtn").addEventListener("click", function () {
-  const bulkEntry = document.getElementById("bulkEntry").checked;
-  const manualEntry = document.getElementById("manualEntry").checked;
-  if (bulkEntry) {
-    alert("'Bulk Entry' selected");
-  } else if (manualEntry) {
-    alert("'Manual Entry' selected");
-  } else {
-    DevExpress.ui.notify(`Please select any one option`, "warning", 3000);
-  }
-});
-
 // Show the "X" icon when a file is selected
 fileUploader.addEventListener("change", function () {
   if (fileUploader.files.length > 0) {
+    $(".clear-icon").removeClass("hidden");
     clearIcon.style.display = "inline"; // Show the "X" icon
   } else {
     clearIcon.style.display = "none"; // Hide if no file is selected
+  }
+});
+
+manualfileUploader.addEventListener("change", function () {
+  if (manualfileUploader.files.length > 0) {
+    $(".clear-icon").removeClass("hidden");
+    manualclearIcon.style.display = "inline"; // Show the "X" icon
+  } else {
+    manualclearIcon.style.display = "none"; // Hide if no file is selected
   }
 });
 
@@ -151,6 +164,13 @@ function showModal() {
     );
     return false;
   }
+
+  const fileInput = document.getElementById("manualfileUploader").files;
+  if (fileInput.length === 0) {
+    DevExpress.ui.notify(`Please upload a file.`, "warning", 3000);
+    return false;
+  }
+
   $(".flatpickr-prev-month").addClass("hidden");
   $(".flatpickr-next-month").addClass("hidden");
 
@@ -177,13 +197,11 @@ function closeModal() {
 
 // Function to submit the form after confirmation
 function submitForm() {
-  DevExpress.ui.notify(
-    `The timesheet has been submitted successfully.`,
-    "success",
-    3000
-  );
-  closeModal();
-  clearSelection();
+  let datesselected = selectedDaysArr;
+  showLoading("UploadLoader");
+  setTimeout(() => {
+    readExcel("manualfileUploader", "manual", datesselected);
+  }, 3000);
 }
 
 // Function to clear the selection
@@ -191,4 +209,156 @@ function clearSelection() {
   selectedDates = []; // Reset the selected dates array
   document.getElementById("daterange").value = ""; // Clear the Flatpickr input
   flatpickrInstance.clear(); // Clear the Flatpickr selection but keep the calendar
+}
+
+function readExcel(filID, methodtype, datesselected = false) {
+  let ExcelData = [];
+  var FileUploaded = $("#" + filID)[0]; // Use the correct ID variable
+  if (typeof FileReader !== "undefined") {
+    var reader = new FileReader();
+
+    // Handle the readAsArrayBuffer method
+    reader.onload = function (e) {
+      var data = new Uint8Array(e.target.result);
+      var binaryString = "";
+      for (var i = 0; i < data.length; i++) {
+        binaryString += String.fromCharCode(data[i]);
+      }
+      ExcelData = ProcessExcel(binaryString);
+      if (!!ExcelData && ExcelData.length > 0 && isValidFile(ExcelData[0])) {
+        showLoading("UploadLoader");
+        setTimeout(() => {
+          saveData(ExcelData, methodtype, datesselected);
+        }, 3000); 
+      } else {
+        hideLoading("UploadLoader");
+        DevExpress.ui.notify(`please upload valid excel file.`, "error", 3000);
+      }
+    };
+
+    // Use readAsArrayBuffer for reading files
+    reader.readAsArrayBuffer(FileUploaded.files[0]);
+  } else {
+    alert("This browser does not support HTML5.");
+  }
+}
+
+function processmanualinfo(exceldata, datesselected) {
+  let gridsource = [];
+  datesselected.forEach((ele) => {
+    for (i = 0; i < 3; i++) {
+      gridsource.push({
+        timeStamp: ele.date,
+        length: exceldata[0].length,
+        billableLength: "",
+        workItemId: exceldata[0].Workitems,
+        comment: exceldata[0].Comment,
+        userId: exceldata[0].UserID,
+        Authtoken: exceldata[0].Authtoken,
+      });
+    }
+  });
+  return gridsource;
+}
+
+function ProcessExcel(data) {
+  var workbook = XLSX.read(data, {
+    type: "binary",
+  });
+  var firstSheet = workbook.SheetNames[0];
+  var excelRows = XLSX.utils.sheet_to_row_object_array(
+    workbook.Sheets[firstSheet]
+  );
+  return excelRows;
+}
+
+function showLoading(id) {
+  const modal = $("#" + id);
+  modal.removeClass("hidden");
+  document.body.style.overflow = "hidden"; // Hide scrollbar
+}
+
+function hideLoading(id) {
+  const modal = $("#" + id);
+  modal.addClass("hidden");
+  document.body.style.overflow = "auto"; // Show scrollbar
+}
+
+function isValidFile(data) {
+  let keys = Object.keys(data);
+  let isValid = false;
+  keys.forEach((ele) => {
+    isValid = validColumns[ele.toLowerCase().replaceAll(" ", "")];
+  });
+  return isValid;
+}
+
+async function saveData(datainp, methodType, datesselected = false) {
+  let payload = preparereq(datainp, methodType, datesselected);
+  var settings = {
+    url: "", //paste your api url here
+    method: "POST",
+    headers: {
+      Authorization: datainp[0].Authtoken,
+    },
+    data: JSON.stringify(payload),
+  };
+
+  try {
+    // const res = await $.ajax(settings);
+    // if (!!res) {
+    console.log(payload);
+    hideLoading("UploadLoader");
+    if (methodType == "manual") {
+      closeModal();
+      clearSelection();
+    }
+    DevExpress.ui.notify(
+      `The timesheet has been submitted successfully.`,
+      "success",
+      3000
+    );
+    openHomePage(methodType);
+    // }
+  } catch (e) {
+    hideLoading("UploadLoader");
+    if (methodType == "manual") {
+      closeModal();
+      clearSelection();
+    }
+    DevExpress.ui.notify(
+      `Failed to save your time entries,Please reach out to the support team`,
+      "error",
+      3000
+    );
+  }
+}
+
+function openHomePage(methodType) {
+  $(".card").removeClass("hidden");
+  $(".uploadmode").addClass("hidden");
+  $(".date-picker-container").addClass("hidden");
+  $(".clear-icon").addClass("hidden");
+  methodType == "bulk"
+    ? (fileUploader.value = "")
+    : (manualfileUploader.value = "");
+}
+
+function preparereq(data, methodType, seldates = false) {
+  let reqpayload = [];
+  if (methodType == "bulk") {
+    data.forEach((ele) => {
+      reqpayload.push({
+        timeStamp: ele.date,
+        length: Number(ele.length),
+        billableLength: Number(ele["Daily Hours"]),
+        workItemId: Number(ele.Workitems),
+        comment: ele.Comment,
+        userId: ele.UserID,
+      });
+    });
+  } else if (methodType == "manual") {
+    reqpayload = processmanualinfo(data, seldates);
+  }
+  return reqpayload;
 }
