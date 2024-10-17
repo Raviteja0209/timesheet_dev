@@ -337,16 +337,16 @@ async function saveData(datainp, methodType, datesselected = false) {
   };
 
   try {
-    // const res = await $.ajax(settings);
-    // if (!!res) {
-    console.log(payload);
-    hideLoading("UploadLoader");
-    if (methodType == "manual") {
-      closeModal();
-      clearSelection();
+    const res = await $.ajax(settings);
+    if (!!res) {
+      console.log(payload);
+      hideLoading("UploadLoader");
+      if (methodType == "manual") {
+        closeModal();
+        clearSelection();
+      }
+      confirmationDialog();
     }
-    confirmationDialog();
-    // }
   } catch (e) {
     hideLoading("UploadLoader");
     if (methodType == "manual") {
