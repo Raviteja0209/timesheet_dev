@@ -195,7 +195,9 @@ function submitForm() {
 // Function to clear the selection
 function clearSelection() {
   selectedDates = []; // Reset the selected dates array
-  document.getElementById("daterange").value = ""; // Clear the Flatpickr input
+  document.getElementById("daterange").value = "";
+  $(".clear-icon").addClass("hidden");
+  manualfileUploader.value = ""; // Clear the Flatpickr input
   flatpickrInstance.clear(); // Clear the Flatpickr selection but keep the calendar
 }
 
@@ -327,18 +329,23 @@ function isValidFile(data) {
 
 async function saveData(datainp, methodType, datesselected = false) {
   let payload = preparereq(datainp, methodType, datesselected);
-  var settings = {
-    url: "", //paste your api url here
-    method: "POST",
-    headers: {
-      Authorization: datainp[0].Authtoken,
-    },
-    data: JSON.stringify(payload),
-  };
-
+  const url = "";
   try {
-    const res = await $.ajax(settings);
-    if (!!res) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: datainp[0].Authtoken,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new error(`Error while making an API Call${response.status}`);
+    }
+
+    const result = await response.json();
+    if (!!result) {
       console.log(payload);
       hideLoading("UploadLoader");
       if (methodType == "manual") {
@@ -354,9 +361,9 @@ async function saveData(datainp, methodType, datesselected = false) {
       clearSelection();
     }
     DevExpress.ui.notify(
-      `Failed to save your time entries,Please reach out to the support team`,
+      `Failed to save your time entries , Please reach out to the support team`,
       "error",
-      3000
+      10000
     );
   }
 }
