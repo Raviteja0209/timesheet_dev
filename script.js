@@ -138,7 +138,8 @@ function frameCalender() {
     disable: [
       (date) => date.getDay() === 0 || date.getDay() === 6, // Disable weekends
     ],
-    minDate: firstDayOfMonth, // Set min date to the first day of the current month
+    minDate: firstDayOfMonth,
+    maxDate: today, // Set min date to the first day of the current month
     onChange: function (selectedDates, dateStr, instance) {
       selectedDateRange = dateStr; // Store the selected date range
       selectedDaysArr = [];
@@ -171,20 +172,7 @@ function showModal() {
     return false;
   }
 
-  $(".flatpickr-prev-month").addClass("hidden");
-  $(".flatpickr-next-month").addClass("hidden");
-
-  // Display the selected dates in the modal
-  let datesDisplay = selectedDaysArr
-    .map((item) => `${item.day}: ${item.date}`)
-    .join("<br>");
-  document.getElementById(
-    "selectedDatesDisplay"
-  ).innerHTML = `You have selected:<br><strong>${datesDisplay}</strong>`;
-
-  // Show the modal
-  document.getElementById("confirmationModal").style.display = "flex";
-  $("#confirmationModal").removeClass("hidden");
+  validateExcel("manualfileUploader");
   return false; // Prevent the form from submitting
 }
 
@@ -226,12 +214,56 @@ function readExcel(filID, methodtype, datesselected = false) {
       }
       ExcelData = ProcessExcel(binaryString);
       if (!!ExcelData && ExcelData.length > 0 && isValidFile(ExcelData[0])) {
-        showLoading("UploadLoader");
+        if (methodtype == "bulk") {
+          showLoading("UploadLoader");
+        }
         setTimeout(() => {
           saveData(ExcelData, methodtype, datesselected);
-        }, 3000); 
+        }, 3000);
       } else {
         hideLoading("UploadLoader");
+        DevExpress.ui.notify(`please upload valid excel file.`, "error", 3000);
+      }
+    };
+
+    // Use readAsArrayBuffer for reading files
+    reader.readAsArrayBuffer(FileUploaded.files[0]);
+  } else {
+    alert("This browser does not support HTML5.");
+  }
+}
+
+function validateExcel(filID) {
+  let ExcelData = [];
+  var FileUploaded = $("#" + filID)[0]; // Use the correct ID variable
+  let isvalidexcelfile = false;
+  if (typeof FileReader !== "undefined") {
+    var reader = new FileReader();
+
+    // Handle the readAsArrayBuffer method
+    reader.onload = function (e) {
+      var data = new Uint8Array(e.target.result);
+      var binaryString = "";
+      for (var i = 0; i < data.length; i++) {
+        binaryString += String.fromCharCode(data[i]);
+      }
+      ExcelData = ProcessExcel(binaryString);
+      if (!!ExcelData && ExcelData.length > 0 && isValidFile(ExcelData[0])) {
+        $(".flatpickr-prev-month").addClass("hidden");
+        $(".flatpickr-next-month").addClass("hidden");
+
+        // Display the selected dates in the modal
+        let datesDisplay = selectedDaysArr
+          .map((item) => `${item.day}: ${item.date}`)
+          .join("<br>");
+        document.getElementById(
+          "selectedDatesDisplay"
+        ).innerHTML = `You have selected:<br><strong>${datesDisplay}</strong>`;
+
+        // Show the modal
+        document.getElementById("confirmationModal").style.display = "flex";
+        $("#confirmationModal").removeClass("hidden");
+      } else {
         DevExpress.ui.notify(`please upload valid excel file.`, "error", 3000);
       }
     };
@@ -249,9 +281,9 @@ function processmanualinfo(exceldata, datesselected) {
     for (i = 0; i < 3; i++) {
       gridsource.push({
         timeStamp: ele.date,
-        length: exceldata[0].length,
-        billableLength: "",
-        workItemId: exceldata[0].Workitems,
+        length: Number(exceldata[0].length),
+        billableLength: i == 0 ? 3 : i == 1 ? 3 : i == 2 ? 2 : 0,
+        workItemId: Number(exceldata[i].Workitems),
         comment: exceldata[0].Comment,
         userId: exceldata[0].UserID,
         Authtoken: exceldata[0].Authtoken,
@@ -305,21 +337,16 @@ async function saveData(datainp, methodType, datesselected = false) {
   };
 
   try {
-    // const res = await $.ajax(settings);
-    // if (!!res) {
-    console.log(payload);
-    hideLoading("UploadLoader");
-    if (methodType == "manual") {
-      closeModal();
-      clearSelection();
+    const res = await $.ajax(settings);
+    if (!!res) {
+      console.log(payload);
+      hideLoading("UploadLoader");
+      if (methodType == "manual") {
+        closeModal();
+        clearSelection();
+      }
+      confirmationDialog();
     }
-    DevExpress.ui.notify(
-      `The timesheet has been submitted successfully.`,
-      "success",
-      3000
-    );
-    openHomePage(methodType);
-    // }
   } catch (e) {
     hideLoading("UploadLoader");
     if (methodType == "manual") {
@@ -344,6 +371,19 @@ function openHomePage(methodType) {
     : (manualfileUploader.value = "");
 }
 
+function hideUI() {
+  $(".card").addClass("hidden");
+  $(".uploadmode").addClass("hidden");
+  $(".date-picker-container").addClass("hidden");
+  $(".clear-icon").addClass("hidden");
+  typeof fileUploader != undefined && !!fileUploader
+    ? (fileUploader.value = "")
+    : "";
+  typeof manualfileUploader != undefined && !!manualfileUploader
+    ? (manualfileUploader.value = "")
+    : "";
+}
+
 function preparereq(data, methodType, seldates = false) {
   let reqpayload = [];
   if (methodType == "bulk") {
@@ -361,4 +401,18 @@ function preparereq(data, methodType, seldates = false) {
     reqpayload = processmanualinfo(data, seldates);
   }
   return reqpayload;
+}
+
+function confirmationDialog() {
+  hideUI();
+  var result = DevExpress.ui.dialog.confirm(
+    "Your timesheet has been successfully submitted. Would you like to close the application?"
+  );
+  result.done(function (dialogResult) {
+    if (dialogResult) {
+      window.close();
+    } else {
+      openHomePage();
+    }
+  });
 }
