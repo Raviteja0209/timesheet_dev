@@ -138,7 +138,8 @@ function frameCalender() {
     disable: [
       (date) => date.getDay() === 0 || date.getDay() === 6, // Disable weekends
     ],
-    minDate: firstDayOfMonth, // Set min date to the first day of the current month
+    minDate: firstDayOfMonth,
+    maxDate: today, // Set min date to the first day of the current month
     onChange: function (selectedDates, dateStr, instance) {
       selectedDateRange = dateStr; // Store the selected date range
       selectedDaysArr = [];
