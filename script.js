@@ -279,16 +279,16 @@ function validateExcel(filID) {
 
 function processmanualinfo(exceldata, datesselected) {
   let gridsource = [];
+  let exceldatalen = !!exceldata && exceldata.length;
   datesselected.forEach((ele) => {
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < exceldatalen; i++) {
       gridsource.push({
-        timeStamp: ele.date,
-        length: Number(exceldata[0].length),
-        billableLength: i == 0 ? 3 : i == 1 ? 3 : i == 2 ? 2 : 0,
+        timeStamp: new Date(ele.date).toISOString(),
+        length: Number(exceldata[i].length),
+        billableLength: exceldata[i]['Daily Hours'],
         workItemId: Number(exceldata[i].Workitems),
-        comment: exceldata[0].Comment,
-        userId: exceldata[0].UserID,
-        Authtoken: exceldata[0].Authtoken,
+        comment: exceldata[i].Comment,
+        userId: exceldata[i].UserID
       });
     }
   });
@@ -335,7 +335,7 @@ async function saveData(datainp, methodType, datesselected = false) {
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: "Bearer Token "+datainp[0].Authtoken,
+        Authorization: "Bearer Token " + datainp[0].Authtoken,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
