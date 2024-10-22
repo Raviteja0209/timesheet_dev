@@ -329,12 +329,13 @@ function isValidFile(data) {
 
 async function saveData(datainp, methodType, datesselected = false) {
   let payload = preparereq(datainp, methodType, datesselected);
-  const url = "";
+  console.log(payload);
+  const url = "https://mortgageconnect.timehub.7pace.com/api?api-version=3.2";
   try {
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: datainp[0].Authtoken,
+        Authorization: "Bearer Token "+datainp[0].Authtoken,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
@@ -346,7 +347,6 @@ async function saveData(datainp, methodType, datesselected = false) {
 
     const result = await response.json();
     if (!!result) {
-      console.log(payload);
       hideLoading("UploadLoader");
       if (methodType == "manual") {
         closeModal();
