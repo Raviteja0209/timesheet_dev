@@ -335,7 +335,7 @@ async function saveData(datainp, methodType, datesselected = false) {
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: "Bearer Token " + datainp[0].Authtoken,
+        "Authorization": `Bearer ${datainp[0].Authtoken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
